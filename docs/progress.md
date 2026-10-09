@@ -55,6 +55,7 @@
 | 추적표 변이 검사 3 | `@pytest.mark.req("REQ-F-999")` 임시 테스트 추가 → 삭제 | 1 failed(알 수 없는 ID 탐지) |
 | OWASP 대조 | Password Storage Cheat Sheet 조회(2026-10-09) | Argon2id 최소 `m=19456 (19 MiB), t=2, p=1`, "Benchmark the chosen parameters on the target system" |
 | Argon2id 벤치마크 | `python:3.12-slim`, `--cpus 2 --memory 512m`, argon2-cffi 25.1.0, 2회 | 선택 후보 m=64MiB t=3 p=1 중앙값 291.0 ms / 191.3 ms. 전체 표는 ADR-0003 |
+| CI | PR [#2](https://github.com/kswkm/Multi-Agent-Engineering-System/pull/2), run 37937066818 | `verify` pass(13s), `security` pass(46s). 로그: mypy "no issues found in 24 source files", "Contracts: 13 kept, 0 broken.", "362 passed", semgrep "Findings: 0", pip-audit "No known vulnerabilities found", gitleaks "no leaks found" |
 
 ## 열린 Finding
 
