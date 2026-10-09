@@ -2,7 +2,7 @@
 
 ## 현재 Phase: 0 — 분석·부트스트랩 (브랜치: `feature/phase-0-bootstrap`)
 
-상태: **Exit Criteria 일부 NOT_VERIFIED** (아래 표). Phase 1은 오너 승인 후 시작한다.
+상태: **Exit Criteria 3개 중 2개 충족(make verify, compose 기동), CI 녹색은 NOT_VERIFIED**. Phase 1은 오너 승인 후 시작한다.
 
 ## Phase 0 분석
 
@@ -51,7 +51,8 @@
 | import 계약 음성 검사 | `harness/checkers/_violation.py`에 `import harness.llm`을 임시로 넣고 `uv run lint-imports` | `BROKEN`, exit 1 → 파일 삭제 후 `1 kept, 0 broken`, exit 0 |
 | compose 정적 검증 | `docker compose --env-file .env.example config --quiet` | exit 0 |
 | compose 비밀번호 가드 | `.env` 없이 `docker compose config` | `required variable POSTGRES_PASSWORD is missing a value` |
-| compose 기동·헬스 | `docker compose up -d` + `docker compose ps` | **NOT_VERIFIED** (아래) |
+| compose 기동·헬스 | 오너가 Docker Desktop 재시작 후(엔진 29.8.2) `.env` 생성(비밀번호는 `secrets.token_urlsafe`, gitignored 확인) → `docker compose up -d` → `docker compose ps` | postgres 16 / redis 7 / toxiproxy 2.12.0 모두 `Up (healthy)`, 포트 127.0.0.1:55432/56379/58474 |
+| compose 실제 접속 | `psql -tAc "select version()"`, `redis-cli ping`, `curl 127.0.0.1:58474/version`, 호스트 TCP 55432·56379 | "PostgreSQL 16.15", "PONG"(Redis 7.4.11), `{"version": "2.12.0"}`, 두 포트 모두 열림 |
 
 ## 열린 Finding
 
@@ -59,11 +60,9 @@
 
 ## NOT_VERIFIED
 
-- **`docker compose up`으로 postgres·redis 기동 (Phase 0 Exit Criteria)** — 작업 시작 시점과 커밋 후 재확인(21:00) 모두 Docker 엔진이 `500 Internal Server Error`를 반환해 컨테이너를 띄울 수 없었다. 대체 검증으로 compose 파일 정적 검증만 했다(위 표). 이것은 기동 검증이 아니다.
 - **CI 녹색 (Phase 0 Exit Criteria)** — 오너 결정으로 이번에는 push/PR을 하지 않았다(로컬 커밋만). `gh`도 설치되지 않았다. CI 워크플로는 작성만 되었고 GitHub에서 한 번도 실행되지 않았다.
 
 ## 다음 할 일
 
-1. Docker Desktop 재시작 후 `cp .env.example .env` → `docker compose up -d` → `docker compose ps`로 3개 서비스 healthy 확인, 결과를 Evidence에 추가.
-2. 오너가 브랜치를 push하고 PR을 열어 CI(verify, security) 녹색 확인. main 브랜치 보호 규칙 설정.
-3. 오너 승인 후 Phase 1: `docs/requirements.md`(SPEC 8장), `docs/domain-boundaries.md`, ARCHITECTURE.md, ADR-0002(오케스트레이터), ADR-0003(암호 정책), 도메인 경계 import 규칙. ADR-0001 재검토.
+1. 오너가 브랜치를 push하고 PR을 열어 CI(verify, security) 녹색 확인. main 브랜치 보호 규칙 설정.
+2. 오너 승인 후 Phase 1: `docs/requirements.md`(SPEC 8장), `docs/domain-boundaries.md`, ARCHITECTURE.md, ADR-0002(오케스트레이터), ADR-0003(암호 정책), 도메인 경계 import 규칙. ADR-0001 재검토.
