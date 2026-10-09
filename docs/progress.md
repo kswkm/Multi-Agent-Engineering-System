@@ -25,7 +25,7 @@
 - [2026-10-09] import-linter 계약 1개: `harness.checkers`, `harness.evidence`는 `harness.llm`, `harness.agents`를 import할 수 없다(SPEC 2.1 "LLM은 제안하고 도구가 판정한다")
 - [2026-10-09] Makefile: install, verify(lint/typecheck/importlint/test), security(semgrep/bandit/pip-audit/gitleaks), load/chaos/report(NOT_IMPLEMENTED로 실패)
 - [2026-10-09] docker-compose(postgres 16, redis 7, toxiproxy 2.12.0, healthcheck, localhost 바인딩, 비밀번호 미설정 시 기동 거부)
-- [2026-10-09] `.env.example`, `.gitignore`(reports/, .env), `.gitattributes`(LF), pre-commit(ruff, gitleaks, mypy, 기본 hook)
+- [2026-10-09] `.env.example`, `.gitignore`(reports/, .env), `.gitattributes`(LF), pre-commit(ruff, gitleaks, mypy, 기본 hook). gitleaks hook은 설치된 바이너리를 쓴다(ADR-0001).
 - [2026-10-09] 부록 A `CLAUDE.md` (Source of Truth에 WORKING-GUIDELINES 한 줄 추가)
 - [2026-10-09] `.github/workflows/ci.yml`(verify + security), PR 템플릿(SPEC 19.2), CODEOWNERS
 - [2026-10-09] `tests/test_bootstrap.py`: SPEC 4장 디렉터리, Phase 0 파일, 패키지 import, .gitignore/.env.example 비밀 규칙, Python 3.12 고정, compose 비밀번호 주입 방식 검사
@@ -37,11 +37,16 @@
 
 | 검사 | 명령 | 결과 |
 |---|---|---|
-| verify | `make verify` | EVIDENCE_VERIFY |
+| verify: ruff | `make verify` → `ruff check .`, `ruff format --check .` | "All checks passed!", "12 files already formatted" |
+| verify: mypy | `make verify` → `mypy` (strict, harness + tests) | "Success: no issues found in 9 source files" |
+| verify: import-linter | `make verify` → `lint-imports` | "Contracts: 1 kept, 0 broken." |
+| verify: pytest | `make verify` → `pytest --cov` | 49 passed in 0.58s, coverage 100% (`make verify` exit 0). 주의: harness에 실행 문장이 0개라 커버리지 수치 자체는 아직 의미가 없다. |
+| pre-commit | `uv run pre-commit run --all-files` 및 커밋 시 hook | 10개 hook 전부 Passed |
 | security: bandit | `make bandit` | High 0 / Medium 0 / Low 0 (exit 0) |
 | security: semgrep | `make semgrep` (`p/python`, 151 rules) | 0 findings (exit 0) |
 | security: pip-audit | `make pip-audit` (uv.lock export, 해시 고정) | "No known vulnerabilities found" (exit 0) |
-| security: gitleaks | `make gitleaks` | EVIDENCE_GITLEAKS |
+| security: gitleaks | `make gitleaks` (커밋 37573ad 이후) | "1 commits scanned.", "no leaks found" (exit 0). `make security` 전체 exit 0 |
+| gitleaks 음성 검사 | 가짜 GitHub 토큰 파일을 stage 후 `gitleaks git --pre-commit --staged` | "leaks found: 1", exit 1 → 파일 unstage·삭제 |
 | 미구현 타깃 실패 | `make load STAGE=smoke`, `make chaos SCENARIO=db_down`, `make report` | 각각 `NOT_IMPLEMENTED ...` 출력, exit 2 |
 | import 계약 음성 검사 | `harness/checkers/_violation.py`에 `import harness.llm`을 임시로 넣고 `uv run lint-imports` | `BROKEN`, exit 1 → 파일 삭제 후 `1 kept, 0 broken`, exit 0 |
 | compose 정적 검증 | `docker compose --env-file .env.example config --quiet` | exit 0 |
@@ -54,7 +59,7 @@
 
 ## NOT_VERIFIED
 
-- **`docker compose up`으로 postgres·redis 기동 (Phase 0 Exit Criteria)** — Docker 엔진이 `500 Internal Server Error`를 반환해 컨테이너를 띄울 수 없었다. 대체 검증으로 compose 파일 정적 검증만 했다(위 표). 이것은 기동 검증이 아니다.
+- **`docker compose up`으로 postgres·redis 기동 (Phase 0 Exit Criteria)** — 작업 시작 시점과 커밋 후 재확인(21:00) 모두 Docker 엔진이 `500 Internal Server Error`를 반환해 컨테이너를 띄울 수 없었다. 대체 검증으로 compose 파일 정적 검증만 했다(위 표). 이것은 기동 검증이 아니다.
 - **CI 녹색 (Phase 0 Exit Criteria)** — 오너 결정으로 이번에는 push/PR을 하지 않았다(로컬 커밋만). `gh`도 설치되지 않았다. CI 워크플로는 작성만 되었고 GitHub에서 한 번도 실행되지 않았다.
 
 ## 다음 할 일
