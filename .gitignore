@@ -1,0 +1,31 @@
+# Secrets (SPEC R6)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Evidence output (SPEC 4)
+reports/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+build/
+dist/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.import_linter_cache/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

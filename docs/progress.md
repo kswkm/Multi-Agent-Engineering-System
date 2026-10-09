@@ -1,0 +1,75 @@
+# Progress
+
+## 현재 Phase: 0 — 분석·부트스트랩 (브랜치: `feature/phase-0-bootstrap`)
+
+상태: **Exit Criteria 3개 모두 Evidence와 함께 충족** (make verify, compose 기동, CI 녹색). PR #1 머지와 Phase 1 시작은 오너 승인 대기. Phase 1은 오너 승인 후 시작한다.
+
+## Phase 0 분석
+
+- **저장소 상태 (2026-10-09)**: `main` 브랜치에 커밋 0개, 작업 트리에 파일 없음(`.git`만 존재). remote `origin = https://github.com/kswkm/Multi-Agent-Engineering-System.git`.
+- **기존 README / CLAUDE.md / ARCHITECTURE / SECURITY / TESTING / CI / docker-compose / 스키마 / 테스트**: 모두 없음.
+- **SPEC과 충돌하는 기존 규칙**: 없음(기존 규칙 자체가 없음). 따라서 SPEC 3장 기본 스택으로 부트스트랩했다.
+- **개발 환경 (Windows 11)**
+  - 시스템 Python 3.13.2만 있음. 3.12는 uv가 프로젝트 단위로 설치(CPython 3.12.14).
+  - 없던 도구를 오너 승인 하에 winget(user scope)으로 설치: uv 0.12.24, GNU Make 4.4.1(ezwinports), gitleaks 8.30.1.
+  - GitHub CLI(`gh`) winget 설치는 실패(`copy_file: Access is denied`). Phase 0은 로컬 커밋만 하므로 영향 없음.
+  - Docker CLI 29.7.2는 있으나 엔진이 `500 Internal Server Error`를 반환(`docker info`). 오너가 Docker Desktop을 재시작하기로 함.
+  - 로컬에 PostgreSQL 17이 설치되어 있어 5432 충돌 가능 → compose 호스트 포트 기본값을 55432/56379/58474로 정함(ADR-0001).
+- **두 지침 문서 사이의 해석**: 부록 B는 미구현 Makefile 타깃을 "TODO로 명확히 실패"하라고 하고, `docs/WORKING-GUIDELINES.md`(04)는 TODO/placeholder를 남기지 말라고 한다. 두 요구를 함께 만족하도록 미구현 타깃은 `NOT_IMPLEMENTED: ... arrives in Phase N`으로 **실패**하게 했다(조용히 통과하는 placeholder가 아님).
+
+## 완료
+
+- [2026-10-09] SPEC PDF → `docs/SPEC.md`, 공통 지침 PDF → `docs/WORKING-GUIDELINES.md`
+- [2026-10-09] SPEC 4장 디렉터리 구조, `harness` 패키지 골격(하위 패키지 7개, 책임 docstring)
+- [2026-10-09] uv 프로젝트(`pyproject.toml`, `uv.lock`, `.python-version`), ruff/mypy/pytest/coverage/import-linter/bandit 설정
+- [2026-10-09] import-linter 계약 1개: `harness.checkers`, `harness.evidence`는 `harness.llm`, `harness.agents`를 import할 수 없다(SPEC 2.1 "LLM은 제안하고 도구가 판정한다")
+- [2026-10-09] Makefile: install, verify(lint/typecheck/importlint/test), security(semgrep/bandit/pip-audit/gitleaks), load/chaos/report(NOT_IMPLEMENTED로 실패)
+- [2026-10-09] docker-compose(postgres 16, redis 7, toxiproxy 2.12.0, healthcheck, localhost 바인딩, 비밀번호 미설정 시 기동 거부)
+- [2026-10-09] `.env.example`, `.gitignore`(reports/, .env), `.gitattributes`(LF), pre-commit(ruff, gitleaks, mypy, 기본 hook). gitleaks hook은 설치된 바이너리를 쓴다(ADR-0001).
+- [2026-10-09] 부록 A `CLAUDE.md` (Source of Truth에 WORKING-GUIDELINES 한 줄 추가)
+- [2026-10-09] `.github/workflows/ci.yml`(verify + security), PR 템플릿(SPEC 19.2), CODEOWNERS
+- [2026-10-09] `tests/test_bootstrap.py`: SPEC 4장 디렉터리, Phase 0 파일, 패키지 import, .gitignore/.env.example 비밀 규칙, Python 3.12 고정, compose 비밀번호 주입 방식 검사
+- [2026-10-09] ADR-0001(기술 스택과 로컬 툴체인), `docs/backlog.md`
+
+## Evidence
+
+모든 명령은 저장소 루트, Windows 11 + Git Bash, uv 관리 CPython 3.12.14에서 실행했다.
+
+| 검사 | 명령 | 결과 |
+|---|---|---|
+| verify: ruff | `make verify` → `ruff check .`, `ruff format --check .` | "All checks passed!", "12 files already formatted" |
+| verify: mypy | `make verify` → `mypy` (strict, harness + tests) | "Success: no issues found in 9 source files" |
+| verify: import-linter | `make verify` → `lint-imports` | "Contracts: 1 kept, 0 broken." |
+| verify: pytest | `make verify` → `pytest --cov` | 49 passed in 0.58s, coverage 100% (`make verify` exit 0). 주의: harness에 실행 문장이 0개라 커버리지 수치 자체는 아직 의미가 없다. |
+| pre-commit | `uv run pre-commit run --all-files` 및 커밋 시 hook | 10개 hook 전부 Passed |
+| security: bandit | `make bandit` | High 0 / Medium 0 / Low 0 (exit 0) |
+| security: semgrep | `make semgrep` (`p/python`, 151 rules) | 0 findings (exit 0) |
+| security: pip-audit | `make pip-audit` (uv.lock export, 해시 고정) | "No known vulnerabilities found" (exit 0) |
+| security: gitleaks | `make gitleaks` (커밋 f2a925b 이후, 당시 해시 37573ad — main 기준 rebase로 변경) | "1 commits scanned.", "no leaks found" (exit 0). `make security` 전체 exit 0 |
+| gitleaks 음성 검사 | 가짜 GitHub 토큰 파일을 stage 후 `gitleaks git --pre-commit --staged` | "leaks found: 1", exit 1 → 파일 unstage·삭제 |
+| 미구현 타깃 실패 | `make load STAGE=smoke`, `make chaos SCENARIO=db_down`, `make report` | 각각 `NOT_IMPLEMENTED ...` 출력, exit 2 |
+| import 계약 음성 검사 | `harness/checkers/_violation.py`에 `import harness.llm`을 임시로 넣고 `uv run lint-imports` | `BROKEN`, exit 1 → 파일 삭제 후 `1 kept, 0 broken`, exit 0 |
+| compose 정적 검증 | `docker compose --env-file .env.example config --quiet` | exit 0 |
+| compose 비밀번호 가드 | `.env` 없이 `docker compose config` | `required variable POSTGRES_PASSWORD is missing a value` |
+| compose 기동·헬스 | 오너가 Docker Desktop 재시작 후(엔진 29.8.2) `.env` 생성(비밀번호는 `secrets.token_urlsafe`, gitignored 확인) → `docker compose up -d` → `docker compose ps` | postgres 16 / redis 7 / toxiproxy 2.12.0 모두 `Up (healthy)`, 포트 127.0.0.1:55432/56379/58474 |
+| CI 녹색 | PR [#1](https://github.com/kswkm/Multi-Agent-Engineering-System/pull/1), run 37932537279 | `verify` pass(10s), `security` pass(23s). 로그 확인: "49 passed", mypy "no issues found in 9 source files", "1 kept, 0 broken", semgrep "Findings: 0", pip-audit "No known vulnerabilities found", gitleaks "4 commits scanned" / "no leaks found" |
+| main 보호 규칙 | `gh api -X PUT repos/.../branches/main/protection` 후 GET으로 재확인 | 필수 체크 `verify`·`security`(strict), 승인 1 + CODEOWNERS 리뷰, stale 리뷰 무효화, 대화 해결 필수, linear history, force push·삭제 금지, enforce_admins=false. 저장소: squash merge만 허용, 머지 후 브랜치 삭제 |
+| 보호 규칙 실효성 | `gh pr view 1 --json mergeStateStatus,reviewDecision` | `BLOCKED`, `REVIEW_REQUIRED` (CI 통과 후에도 승인 없이는 머지 불가) |
+| compose 실제 접속 | `psql -tAc "select version()"`, `redis-cli ping`, `curl 127.0.0.1:58474/version`, 호스트 TCP 55432·56379 | "PostgreSQL 16.15", "PONG"(Redis 7.4.11), `{"version": "2.12.0"}`, 두 포트 모두 열림 |
+
+## 열린 Finding
+
+- 없음.
+
+## 저장소 이력 메모
+
+- `main`에는 PR base로 쓰려고 만든 빈 루트 커밋(`chore: initialize repository`, 파일 변경 없음) 하나만 있다. 원격이 비어 있어 base 브랜치 없이는 PR을 만들 수 없었다. 기능 브랜치는 그 위로 rebase했다.
+
+## NOT_VERIFIED
+
+- **main 직접 push 차단** — 보호 규칙 설정값과 PR 머지 차단은 확인했지만, 실제로 main에 직접 push해서 거부되는지는 시험하지 않았다(main에 쓰기를 시도하는 것 자체를 피함).
+
+## 다음 할 일
+
+1. 오너가 PR #1을 검토하고 squash merge. (1인 저장소라 본인 PR을 승인할 수 없으므로, 관리자 권한으로 "Merge without waiting for requirements"를 체크해 머지한다. enforce_admins=false인 이유.)
+2. 오너 승인 후 Phase 1: `docs/requirements.md`(SPEC 8장), `docs/domain-boundaries.md`, ARCHITECTURE.md, ADR-0002(오케스트레이터), ADR-0003(암호 정책), 도메인 경계 import 규칙. ADR-0001 재검토.

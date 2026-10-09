@@ -1,0 +1,80 @@
+[project]
+name = "multi-agent-engineering-system"
+version = "0.0.0"
+description = "Multi-agent harness that verifies AI-generated code with deterministic evidence (see docs/SPEC.md)."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "import-linter>=2.1",
+    "pre-commit>=4.0",
+    "bandit>=1.8",
+    "pip-audit>=2.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["harness"]
+
+# ---------------------------------------------------------------- ruff
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+# docs/ holds the SPEC verbatim; its embedded code samples are not project code.
+extend-exclude = ["reports", "docs"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "S", "N", "SIM", "RUF", "PT", "ASYNC"]
+
+[tool.ruff.lint.per-file-ignores]
+# assert is the pytest idiom; S101 only matters in production code.
+"**/tests/**" = ["S101"]
+"tests/**" = ["S101"]
+
+# ---------------------------------------------------------------- mypy
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["harness", "tests"]
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "req(id): links a test to a requirement ID in docs/requirements.md (e.g. REQ-F-003)",
+]
+
+[tool.coverage.run]
+source = ["harness"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+
+# ---------------------------------------------------------------- bandit
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "reports"]
+
+# ---------------------------------------------------------------- import-linter
+[tool.importlinter]
+root_packages = ["harness"]
+
+[[tool.importlinter.contracts]]
+name = "Deterministic judgement layers do not depend on LLM code (SPEC 2.1, 6: Validation runs without an LLM)"
+type = "forbidden"
+source_modules = ["harness.checkers", "harness.evidence"]
+forbidden_modules = ["harness.llm", "harness.agents"]
