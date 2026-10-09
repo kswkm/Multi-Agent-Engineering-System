@@ -3,7 +3,7 @@
 ## Source of Truth
 - 개발 기획서: docs/SPEC.md (이 PDF의 내용). 충돌 시 SPEC이 우선한다.
 - 진행 상황: docs/progress.md — 작업 시작 전 반드시 읽고, 끝나면 갱신한다.
-- 공통 작업 지침: docs/WORKING-GUIDELINES.md (구현·테스트·최종 검증·보고 방법).
+- 공통 작업 지침: docs/WORKING-GUIDELINES.md (v2. 구현·테스트·최종 검증·보고 방법).
 
 ## 절대 규칙
 1. 실행 결과만 Evidence다. "해결했다"고 쓰기 전에 명령을 실행하고 수치를 남긴다.
