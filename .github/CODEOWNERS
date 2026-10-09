@@ -1,0 +1,6 @@
+# Protected paths (SPEC 4, 13.1): changes need owner review.
+/tests/                     @kswkm
+/services/*/tests/          @kswkm
+/verification/              @kswkm
+/harness/policies/          @kswkm
+/.github/workflows/         @kswkm
