@@ -37,15 +37,17 @@ extend-exclude = ["reports", "docs"]
 select = ["E", "W", "F", "I", "B", "UP", "S", "N", "SIM", "RUF", "PT", "ASYNC"]
 
 [tool.ruff.lint.per-file-ignores]
-# assert is the pytest idiom; S101 only matters in production code.
-"**/tests/**" = ["S101"]
-"tests/**" = ["S101"]
+# assert is the pytest idiom (S101). Tests run fixed tool commands via subprocess without a
+# shell (S603); production code goes through the Tool Gateway instead (SPEC 9, CWE-78).
+"**/tests/**" = ["S101", "S603"]
+"tests/**" = ["S101", "S603"]
 
 # ---------------------------------------------------------------- mypy
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["harness", "tests"]
+files = ["harness", "tests", "services/todo-api/app"]
+mypy_path = "services/todo-api"
 
 # ---------------------------------------------------------------- pytest
 [tool.pytest.ini_options]
@@ -70,11 +72,94 @@ show_missing = true
 exclude_dirs = ["tests", ".venv", "reports"]
 
 # ---------------------------------------------------------------- import-linter
+# Boundary rules are documented in docs/domain-boundaries.md and guarded by
+# tests/test_domain_boundaries.py. `app` resolves via PYTHONPATH=services/todo-api (Makefile).
 [tool.importlinter]
-root_packages = ["harness"]
+root_packages = ["harness", "app"]
 
 [[tool.importlinter.contracts]]
 name = "Deterministic judgement layers do not depend on LLM code (SPEC 2.1, 6: Validation runs without an LLM)"
 type = "forbidden"
 source_modules = ["harness.checkers", "harness.evidence"]
 forbidden_modules = ["harness.llm", "harness.agents"]
+
+[[tool.importlinter.contracts]]
+name = "Target service never imports the harness (SPEC 2: Harness -> Target only)"
+type = "forbidden"
+source_modules = ["app"]
+forbidden_modules = ["harness"]
+
+[[tool.importlinter.contracts]]
+name = "Core infrastructure does not depend on business domains"
+type = "forbidden"
+source_modules = ["app.core"]
+forbidden_modules = ["app.domains"]
+
+# SPEC 5.1 allowed dependencies. Only direct imports are checked: an allowed dependency
+# may itself depend on another domain (sharing -> todos -> tags) without breaking these.
+[[tool.importlinter.contracts]]
+name = "users depends on no other domain (SPEC 5.1)"
+type = "forbidden"
+source_modules = ["app.domains.users"]
+forbidden_modules = ["app.domains.auth", "app.domains.todos", "app.domains.tags", "app.domains.sharing"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "tags depends on no other domain (SPEC 5.1)"
+type = "forbidden"
+source_modules = ["app.domains.tags"]
+forbidden_modules = ["app.domains.auth", "app.domains.users", "app.domains.todos", "app.domains.sharing"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "auth may depend only on users (SPEC 5.1)"
+type = "forbidden"
+source_modules = ["app.domains.auth"]
+forbidden_modules = ["app.domains.todos", "app.domains.tags", "app.domains.sharing"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "todos may depend only on users and tags (SPEC 5.1)"
+type = "forbidden"
+source_modules = ["app.domains.todos"]
+forbidden_modules = ["app.domains.auth", "app.domains.sharing"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "sharing may depend only on todos and users (SPEC 5.1)"
+type = "forbidden"
+source_modules = ["app.domains.sharing"]
+forbidden_modules = ["app.domains.auth", "app.domains.tags"]
+allow_indirect_imports = true
+
+# "Other domains' data goes through that domain's service interface" (SPEC 5):
+# each domain's internals may be imported only from inside that domain.
+[[tool.importlinter.contracts]]
+name = "auth internals are private to auth"
+type = "protected"
+protected_modules = ["app.domains.auth.internal"]
+allowed_importers = ["app.domains.auth"]
+
+[[tool.importlinter.contracts]]
+name = "users internals are private to users"
+type = "protected"
+protected_modules = ["app.domains.users.internal"]
+allowed_importers = ["app.domains.users"]
+
+[[tool.importlinter.contracts]]
+name = "todos internals are private to todos"
+type = "protected"
+protected_modules = ["app.domains.todos.internal"]
+allowed_importers = ["app.domains.todos"]
+
+[[tool.importlinter.contracts]]
+name = "tags internals are private to tags"
+type = "protected"
+protected_modules = ["app.domains.tags.internal"]
+allowed_importers = ["app.domains.tags"]
+
+[[tool.importlinter.contracts]]
+name = "sharing internals are private to sharing"
+type = "protected"
+protected_modules = ["app.domains.sharing.internal"]
+allowed_importers = ["app.domains.sharing"]
