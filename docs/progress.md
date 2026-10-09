@@ -45,7 +45,7 @@
 | security: bandit | `make bandit` | High 0 / Medium 0 / Low 0 (exit 0) |
 | security: semgrep | `make semgrep` (`p/python`, 151 rules) | 0 findings (exit 0) |
 | security: pip-audit | `make pip-audit` (uv.lock export, 해시 고정) | "No known vulnerabilities found" (exit 0) |
-| security: gitleaks | `make gitleaks` (커밋 37573ad 이후) | "1 commits scanned.", "no leaks found" (exit 0). `make security` 전체 exit 0 |
+| security: gitleaks | `make gitleaks` (커밋 f2a925b 이후, 당시 해시 37573ad — main 기준 rebase로 변경) | "1 commits scanned.", "no leaks found" (exit 0). `make security` 전체 exit 0 |
 | gitleaks 음성 검사 | 가짜 GitHub 토큰 파일을 stage 후 `gitleaks git --pre-commit --staged` | "leaks found: 1", exit 1 → 파일 unstage·삭제 |
 | 미구현 타깃 실패 | `make load STAGE=smoke`, `make chaos SCENARIO=db_down`, `make report` | 각각 `NOT_IMPLEMENTED ...` 출력, exit 2 |
 | import 계약 음성 검사 | `harness/checkers/_violation.py`에 `import harness.llm`을 임시로 넣고 `uv run lint-imports` | `BROKEN`, exit 1 → 파일 삭제 후 `1 kept, 0 broken`, exit 0 |
