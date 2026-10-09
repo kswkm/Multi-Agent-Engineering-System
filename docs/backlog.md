@@ -12,4 +12,4 @@
 | CI job: contract, guard, ai-review, load-nightly, security.yml 분리 | SPEC 16.3. Phase 0은 verify + security 골격만 | 3, 7, 8 |
 | AGENTS.md, ARCHITECTURE.md, SECURITY.md, TESTING.md, RUNBOOK.md | 내용이 생기는 Phase에 쓴다(빈 껍데기 문서를 만들지 않음) | 1, 3, 5, 8 |
 | services/todo-api를 import-linter 대상에 추가하고 도메인 경계 계약 작성 | SPEC 5. 패키지가 생겨야 계약을 검사할 수 있다 | 1–2 |
-| main 브랜치 보호 규칙(PR + CI 통과 + 승인 1) | SPEC 16. GitHub 저장소 설정 작업이라 사람 권한 필요 | 첫 PR 전 |
+| 새 CI job(contract, guard, ai-review)을 main 보호 규칙의 필수 체크에 추가 | 현재 필수 체크는 verify, security뿐. SPEC 16.3 | 3, 7, 8 |

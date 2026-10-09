@@ -2,7 +2,7 @@
 
 ## 현재 Phase: 0 — 분석·부트스트랩 (브랜치: `feature/phase-0-bootstrap`)
 
-상태: **Exit Criteria 3개 중 2개 충족(make verify, compose 기동), CI 녹색은 NOT_VERIFIED**. Phase 1은 오너 승인 후 시작한다.
+상태: **Exit Criteria 3개 모두 Evidence와 함께 충족** (make verify, compose 기동, CI 녹색). PR #1 머지와 Phase 1 시작은 오너 승인 대기. Phase 1은 오너 승인 후 시작한다.
 
 ## Phase 0 분석
 
@@ -52,17 +52,24 @@
 | compose 정적 검증 | `docker compose --env-file .env.example config --quiet` | exit 0 |
 | compose 비밀번호 가드 | `.env` 없이 `docker compose config` | `required variable POSTGRES_PASSWORD is missing a value` |
 | compose 기동·헬스 | 오너가 Docker Desktop 재시작 후(엔진 29.8.2) `.env` 생성(비밀번호는 `secrets.token_urlsafe`, gitignored 확인) → `docker compose up -d` → `docker compose ps` | postgres 16 / redis 7 / toxiproxy 2.12.0 모두 `Up (healthy)`, 포트 127.0.0.1:55432/56379/58474 |
+| CI 녹색 | PR [#1](https://github.com/kswkm/Multi-Agent-Engineering-System/pull/1), run 37932537279 | `verify` pass(10s), `security` pass(23s). 로그 확인: "49 passed", mypy "no issues found in 9 source files", "1 kept, 0 broken", semgrep "Findings: 0", pip-audit "No known vulnerabilities found", gitleaks "4 commits scanned" / "no leaks found" |
+| main 보호 규칙 | `gh api -X PUT repos/.../branches/main/protection` 후 GET으로 재확인 | 필수 체크 `verify`·`security`(strict), 승인 1 + CODEOWNERS 리뷰, stale 리뷰 무효화, 대화 해결 필수, linear history, force push·삭제 금지, enforce_admins=false. 저장소: squash merge만 허용, 머지 후 브랜치 삭제 |
+| 보호 규칙 실효성 | `gh pr view 1 --json mergeStateStatus,reviewDecision` | `BLOCKED`, `REVIEW_REQUIRED` (CI 통과 후에도 승인 없이는 머지 불가) |
 | compose 실제 접속 | `psql -tAc "select version()"`, `redis-cli ping`, `curl 127.0.0.1:58474/version`, 호스트 TCP 55432·56379 | "PostgreSQL 16.15", "PONG"(Redis 7.4.11), `{"version": "2.12.0"}`, 두 포트 모두 열림 |
 
 ## 열린 Finding
 
 - 없음.
 
+## 저장소 이력 메모
+
+- `main`에는 PR base로 쓰려고 만든 빈 루트 커밋(`chore: initialize repository`, 파일 변경 없음) 하나만 있다. 원격이 비어 있어 base 브랜치 없이는 PR을 만들 수 없었다. 기능 브랜치는 그 위로 rebase했다.
+
 ## NOT_VERIFIED
 
-- **CI 녹색 (Phase 0 Exit Criteria)** — 오너 결정으로 이번에는 push/PR을 하지 않았다(로컬 커밋만). `gh`도 설치되지 않았다. CI 워크플로는 작성만 되었고 GitHub에서 한 번도 실행되지 않았다.
+- **main 직접 push 차단** — 보호 규칙 설정값과 PR 머지 차단은 확인했지만, 실제로 main에 직접 push해서 거부되는지는 시험하지 않았다(main에 쓰기를 시도하는 것 자체를 피함).
 
 ## 다음 할 일
 
-1. 오너가 브랜치를 push하고 PR을 열어 CI(verify, security) 녹색 확인. main 브랜치 보호 규칙 설정.
+1. 오너가 PR #1을 검토하고 squash merge. (1인 저장소라 본인 PR을 승인할 수 없으므로, 관리자 권한으로 "Merge without waiting for requirements"를 체크해 머지한다. enforce_admins=false인 이유.)
 2. 오너 승인 후 Phase 1: `docs/requirements.md`(SPEC 8장), `docs/domain-boundaries.md`, ARCHITECTURE.md, ADR-0002(오케스트레이터), ADR-0003(암호 정책), 도메인 경계 import 규칙. ADR-0001 재검토.
