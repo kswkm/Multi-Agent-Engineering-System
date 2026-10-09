@@ -34,6 +34,8 @@ format:
 typecheck:
 	$(UV) run mypy
 
+# The target service package `app` lives under services/todo-api.
+importlint: export PYTHONPATH = services/todo-api
 importlint:
 	$(UV) run lint-imports
 
@@ -46,7 +48,7 @@ semgrep:
 	$(UV) tool run semgrep scan --config p/python --error --metrics=off --exclude reports --exclude .venv
 
 bandit:
-	$(UV) run bandit -c pyproject.toml -r harness
+	$(UV) run bandit -c pyproject.toml -r harness services/todo-api/app
 
 pip-audit:
 	$(UV) export --frozen --format requirements-txt --no-emit-project --output-file reports/audit/requirements.txt

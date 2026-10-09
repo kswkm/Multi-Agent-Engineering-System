@@ -35,6 +35,16 @@ Status: Accepted (Phase 0). Phase 1에서 재검토하며, 바뀌면 이 ADR을 
 - 얻는 것: Windows 로컬과 Linux CI가 같은 `make` 타깃과 같은 lock으로 돈다.
 - 잃는 것·리스크: 개발자 머신에 uv, GNU make, gitleaks가 필요하다(README Quick start). `uv tool run semgrep`은 매번 최신 semgrep을 받으므로 규칙 결과가 시간에 따라 변할 수 있다. Phase 3에서 버전을 고정한다(backlog).
 
+## Phase 1 재검토 (2026-10-09)
+
+스택 결정은 바꾸지 않는다. Phase 1에서 확인하거나 추가한 내용은 아래와 같다.
+
+- import-linter 2.15의 `protected` 계약과 `allow_indirect_imports`로 SPEC 5의 "서비스 인터페이스 경유"를 강제할 수 있음을 확인했다(설치된 소스 확인). import-linter는 존재하지 않는 모듈을 가리키는 계약을 경고 없이 통과시킨다. 그래서 계약 모듈 존재 테스트를 추가했다(domain-boundaries 6).
+- Target 패키지 `app`은 `services/todo-api` 아래에 있어서, Makefile `importlint` 타깃이 `PYTHONPATH=services/todo-api`를 설정한다. mypy는 `mypy_path`로 같은 경로를 본다.
+- JWT 라이브러리는 PyJWT + cryptography(ADR-0003), 비밀번호 해시는 argon2-cffi(ADR-0003)로 정했다. 실제 의존성 추가는 Phase 2에서 한다.
+- 열린 항목은 ADR로 남긴다.
+  - REQ-N-007.2(api 2개 인스턴스 롤링 재시작)는 인스턴스 앞에 로드밸런서가 필요하다. SPEC 3 스택에는 없으므로 Phase 5에서 선택하고 ADR로 남긴다(backlog).
+
 ## Verification
 
 - `make verify` 성공(ruff, mypy --strict, import-linter, pytest + coverage).
